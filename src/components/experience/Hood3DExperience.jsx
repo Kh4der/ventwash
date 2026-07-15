@@ -22,7 +22,7 @@ const SECTIONS = [
   { id: 'rebuild', kicker: 'REASSEMBLY & DOCUMENTATION', title: 'Back together. *Inspection-ready*.', body: 'Every panel re-hung and gasketed, systems restarted, service sticker applied — plus a photo report your fire marshal and insurer will actually accept.', side: 'right' },
   { id: 'finale', kicker: 'BOOK YOUR HOOD CLEANING', title: 'Airflow, *restored*.', body: 'Smoke off the line, up the duct, out the roof — and clean make-up air back in. After-hours scheduling. Licensed & insured. Free quotes.', side: 'center', cta: true },
   { id: 'outro', kicker: 'TO SPEC. TO SERVICE.', title: 'From *blueprint* to bare metal.', body: 'Every system is cleaned back to its drawing — hood, filters, grease duct and fan restored to the NFPA 96 bare-metal standard, documented panel by panel for your fire marshal and insurer.', side: 'left', video: 'outro' },
-  { id: 'end', kicker: 'VENTWASH — HOOD TO ROOF', title: 'Clean. Compliant. *Ready to cook*.', body: 'This is how your kitchen should breathe. Book your free quote and we’ll keep it this way — on a schedule your inspector will love.', side: 'center', endCta: true },
+  { id: 'end', kicker: 'VENTWASH — HOOD TO ROOF', title: 'Clean. Compliant. *Ready to cook*.', body: 'This is how your kitchen should breathe. Book your free quote and we’ll keep it this way — on a schedule your inspector will love.', side: 'center', endCta: true, compact: true },
 ];
 const MARQ = ' NFPA 96 — KITCHEN EXHAUST CLEANING — HOOD TO ROOF — BARE-METAL STANDARD —';
 const ORDER3D = ['range', 'canopy', 'filters', 'fire', 'duct', 'fan', 'mua'];
@@ -31,6 +31,10 @@ const ANCHOR3D = { range: [0.88, 0.75, 0.45], canopy: [1.1, 2.45, 0.35], filters
 const PART_SEC = { canopy: 4, filters: 5, fire: 6, duct: 7, fan: 8, mua: 9 };
 const VIDEO_SRC = { intro: '/animations/MAINSTART.scrub.mp4', outro: '/animations/FINALEND.scrub.mp4' };
 const END_IMG = '/animations/final-after.png';
+const FOUNDERS = [
+  { name: 'ARAE', sign: 'Arae', role: 'CO-FOUNDER', img: '/leadership/arae.jpg' },
+  { name: 'KHADER', sign: 'Khader', role: 'CO-FOUNDER', img: '/leadership/khader.jpg' },
+];
 const N = SECTIONS.length;
 const SEC_VH = 170;
 
@@ -739,6 +743,31 @@ function RevealList({ active, items, delay = 0.45 }) {
     ))}
   </div>;
 }
+// Pen-signature reveal: the script name "writes" itself left-to-right when
+// its section becomes active (clip-path sweep), like signing the work.
+function SignatureReveal({ text, active, delay = 0 }) {
+  const r = React.useRef(null);
+  const ent = React.useRef(false);
+  React.useEffect(() => {
+    const el = r.current; if (!el) return;
+    if (!active && !ent.current) return;
+    gsap.killTweensOf(el);
+    if (active) {
+      ent.current = true;
+      gsap.fromTo(el,
+        { clipPath: 'inset(-25% 100% -25% 0)', autoAlpha: 1 },
+        { clipPath: 'inset(-25% 0% -25% 0)', duration: 1.5, ease: 'power2.inOut', delay });
+    } else {
+      gsap.to(el, { autoAlpha: 0, duration: 0.3, ease: 'power2.in' });
+    }
+  }, [active]);
+  return (
+    <div ref={r} style={{ fontFamily: "'Great Vibes', cursive", fontSize: 32, lineHeight: 1.15, color: '#16233b', transform: 'rotate(-4deg)', opacity: 0, marginTop: 2, whiteSpace: 'nowrap' }}>
+      {text}
+    </div>
+  );
+}
+
 function WipeBtn({ label, primary, small, onClick }) {
   const [h, setH] = React.useState(false);
   const ref = React.useRef(null);
@@ -1160,8 +1189,8 @@ function Hood3DExperience() {
             <div style={{ overflow: 'hidden', marginBottom: 14 }}>
               <RevealBlock active={act} mask style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 15, letterSpacing: '.16em', color: '#3E6FA6' }}>{s.kicker}</RevealBlock>
             </div>
-            <RevealTitle text={s.title} active={act} size={s.side === 'center' ? 'clamp(64px,9vw,150px)' : 'clamp(44px,5.2vw,84px)'} />
-            <RevealBlock active={act} delay={0.32} style={{ fontSize: s.side === 'center' ? 21 : 18.5, lineHeight: 1.55, color: '#414c57', marginTop: 18, maxWidth: s.side === 'center' ? 680 : 500, marginLeft: s.side === 'center' ? 'auto' : 0, marginRight: s.side === 'center' ? 'auto' : 0 }}>{s.body}</RevealBlock>
+            <RevealTitle text={s.title} active={act} size={s.compact ? 'clamp(36px,4.6vw,64px)' : s.side === 'center' ? 'clamp(64px,9vw,150px)' : 'clamp(44px,5.2vw,84px)'} />
+            <RevealBlock active={act} delay={0.32} style={{ fontSize: s.compact ? 16.5 : s.side === 'center' ? 21 : 18.5, lineHeight: 1.55, color: '#414c57', marginTop: s.compact ? 12 : 18, maxWidth: s.compact ? 560 : s.side === 'center' ? 680 : 500, marginLeft: s.side === 'center' ? 'auto' : 0, marginRight: s.side === 'center' ? 'auto' : 0 }}>{s.body}</RevealBlock>
             {s.items ? <RevealList active={act} items={s.items} /> : null}
             {s.cta ? <RevealBlock active={act} delay={0.5} style={{ marginTop: 30, pointerEvents: 'auto' }}>
               <div style={{ display: 'inline-flex', gap: 12 }}>
@@ -1172,12 +1201,27 @@ function Hood3DExperience() {
               <div style={{ marginTop: 24, fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, letterSpacing: '.08em', color: '#4c5661' }}>NFPA 96 COMPLIANT · PHOTO REPORTS · SERVICE STICKERS · AFTER-HOURS CREWS</div>
               <div style={{ marginTop: 18, fontStyle: 'italic', fontSize: 17, color: '#414c57', maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>“They don’t just clean — every system is documented for our inspections. Passed the fire marshal without a note.” <span style={{ fontStyle: 'normal', fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5, color: '#5b6570' }}>— RESTAURANT GM</span></div>
             </RevealBlock> : null}
-            {s.endCta ? <RevealBlock active={act} delay={0.5} style={{ marginTop: 30, pointerEvents: 'auto' }}>
+            {s.endCta ? <RevealBlock active={act} delay={0.5} style={{ marginTop: 20, pointerEvents: 'auto' }}>
               <div style={{ display: 'inline-flex', gap: 12 }}>
-                <WipeBtn primary label="Get a free quote" onClick={() => { track('quote_cta_clicked', { location: 'end' }); window.dispatchEvent(new CustomEvent('vw:quote-open')); }} />
-                <WipeBtn label="WhatsApp us" onClick={() => { track('whatsapp_cta_clicked', { location: 'end' }); window.open('https://wa.me/17868609286?text=' + encodeURIComponent('Hi VentWash — I\'d like a quote for kitchen hood cleaning.'), '_blank', 'noopener'); }} />
+                <WipeBtn small primary label="Get a free quote" onClick={() => { track('quote_cta_clicked', { location: 'end' }); window.dispatchEvent(new CustomEvent('vw:quote-open')); }} />
+                <WipeBtn small label="WhatsApp us" onClick={() => { track('whatsapp_cta_clicked', { location: 'end' }); window.open('https://wa.me/17868609286?text=' + encodeURIComponent('Hi VentWash — I\'d like a quote for kitchen hood cleaning.'), '_blank', 'noopener'); }} />
               </div>
-              <div style={{ marginTop: 22, fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, letterSpacing: '.08em', color: '#4c5661' }}>NFPA 96 COMPLIANT · PHOTO REPORTS · AFTER-HOURS CREWS</div>
+              <div style={{ marginTop: 14, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, letterSpacing: '.08em', color: '#4c5661' }}>NFPA 96 COMPLIANT · PHOTO REPORTS · AFTER-HOURS CREWS</div>
+            </RevealBlock> : null}
+            {s.endCta ? <RevealBlock active={act} delay={0.75} style={{ marginTop: 22 }}>
+              <div style={{ width: 1.5, height: 22, background: 'rgba(26,33,41,.25)', margin: '0 auto 12px' }}></div>
+              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, letterSpacing: '.18em', color: '#5b6570' }}>EVERY JOB LEAVES WITH OUR NAMES ON IT</div>
+              <div style={{ display: 'flex', gap: 'clamp(28px,6vw,64px)', justifyContent: 'center', marginTop: 14 }}>
+                {FOUNDERS.map((f, fi) => (
+                  <div key={f.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <img src={f.img} alt={`${f.name} — ${f.role}, VentWash`} width="72" height="72"
+                      style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', filter: 'grayscale(100%) contrast(1.06)', border: '2px solid rgba(62,111,166,.55)', boxShadow: '0 0 0 5px rgba(243,248,251,.75), 0 10px 26px rgba(26,33,41,.18)' }} />
+                    <div style={{ marginTop: 10, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fontWeight: 500, letterSpacing: '.16em', color: '#1a2129' }}>{f.name}</div>
+                    <SignatureReveal text={f.sign} active={act} delay={0.95 + fi * 0.55} />
+                    <div style={{ marginTop: 2, fontFamily: "'IBM Plex Mono',monospace", fontSize: 10.5, letterSpacing: '.14em', color: '#5b6570' }}>{f.role}</div>
+                  </div>
+                ))}
+              </div>
             </RevealBlock> : null}
             {i === 0 ? <RevealBlock active={act} delay={0.85} style={{ marginTop: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
               <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5, letterSpacing: '.22em', color: '#5b6570' }}>SCROLL</div>

@@ -42,3 +42,5 @@ next-env.d.ts
 
 # keep the env template in the repo
 !.env.example
+
+.vercel
