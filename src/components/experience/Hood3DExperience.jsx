@@ -32,8 +32,8 @@ const PART_SEC = { canopy: 4, filters: 5, fire: 6, duct: 7, fan: 8, mua: 9 };
 const VIDEO_SRC = { intro: '/animations/MAINSTART.scrub.mp4', outro: '/animations/FINALEND.scrub.mp4' };
 const END_IMG = '/animations/final-after.png';
 const FOUNDERS = [
-  { name: 'ARAE', sign: 'Arae', role: 'CO-FOUNDER', img: '/leadership/arae.jpg' },
-  { name: 'KHADER', sign: 'Khader', role: 'CO-FOUNDER', img: '/leadership/khader.jpg' },
+  { sign: 'Aare', role: 'CO-FOUNDER', img: '/leadership/arae.jpg' },
+  { sign: 'Khader', role: 'CO-FOUNDER', img: '/leadership/khader.jpg' },
 ];
 const N = SECTIONS.length;
 const SEC_VH = 170;
@@ -1213,10 +1213,9 @@ function Hood3DExperience() {
               <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, letterSpacing: '.18em', color: '#5b6570' }}>EVERY JOB LEAVES WITH OUR NAMES ON IT</div>
               <div style={{ display: 'flex', gap: 'clamp(28px,6vw,64px)', justifyContent: 'center', marginTop: 14 }}>
                 {FOUNDERS.map((f, fi) => (
-                  <div key={f.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <img src={f.img} alt={`${f.name} — ${f.role}, VentWash`} width="72" height="72"
+                  <div key={f.sign} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <img src={f.img} alt={`${f.sign} — ${f.role}, VentWash`} width="72" height="72"
                       style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', filter: 'grayscale(100%) contrast(1.06)', border: '2px solid rgba(62,111,166,.55)', boxShadow: '0 0 0 5px rgba(243,248,251,.75), 0 10px 26px rgba(26,33,41,.18)' }} />
-                    <div style={{ marginTop: 10, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, fontWeight: 500, letterSpacing: '.16em', color: '#1a2129' }}>{f.name}</div>
                     <SignatureReveal text={f.sign} active={act} delay={0.95 + fi * 0.55} />
                     <div style={{ marginTop: 2, fontFamily: "'IBM Plex Mono',monospace", fontSize: 10.5, letterSpacing: '.14em', color: '#5b6570' }}>{f.role}</div>
                   </div>
