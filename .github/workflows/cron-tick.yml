@@ -1,0 +1,51 @@
+# Free reminder/worker cron for the automation platform.
+#
+# Vercel's Hobby plan only allows DAILY cron, which is too slow for appointment
+# reminders and speed-to-lead callbacks. This pings the durable job worker every
+# 5 minutes instead. All timing lives in jobs.run_at, so an occasionally-late
+# GitHub-scheduled run is harmless — jobs just execute on the next tick.
+#
+# SETUP (one-time): add a repository secret named CRON_SECRET (Settings →
+# Secrets and variables → Actions → New repository secret) with the SAME value
+# as the CRON_SECRET env var in Vercel. Optionally add a SITE_URL variable if
+# your domain differs from https://ventwash.com.
+#
+# Note: GitHub-scheduled workflows can be delayed or skipped under load. For
+# tighter cadence use cron-job.org or Vercel Pro against the same URL — the
+# endpoint is pinger-agnostic.
+
+name: cron-tick
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # every 5 minutes (UTC)
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+concurrency:
+  group: cron-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Drain the job queue
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://ventwash.com' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET repository secret is not set — skipping."
+            exit 0
+          fi
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$SITE_URL/api/cron/tick")
+          echo "HTTP $code"
+          cat /tmp/out.json || true
+          # 2xx only; anything else fails the run so it shows up in the Actions tab.
+          case "$code" in
+            2*) echo "ok" ;;
+            *) echo "tick failed"; exit 1 ;;
+          esac
