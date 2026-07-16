@@ -1195,7 +1195,7 @@ function Hood3DExperience() {
             {s.cta ? <RevealBlock active={act} delay={0.5} style={{ marginTop: 30, pointerEvents: 'auto' }}>
               <div style={{ display: 'inline-flex', gap: 12 }}>
                 <WipeBtn primary label="Get a free quote" onClick={() => { track('quote_cta_clicked', { location: 'finale' }); window.dispatchEvent(new CustomEvent('vw:quote-open')); }} />
-                <WipeBtn label="Call (786) 860-9286" onClick={() => { track('call_cta_clicked', { location: 'finale' }); window.location.href = 'tel:+17868609286'; }} />
+                <WipeBtn label="Call (973) 291-9726" onClick={() => { track('call_cta_clicked', { location: 'finale' }); window.location.href = 'tel:+19732919726'; }} />
                 <WipeBtn label="WhatsApp us" onClick={() => { track('whatsapp_cta_clicked', { location: 'finale' }); window.open('https://wa.me/17868609286?text=' + encodeURIComponent('Hi VentWash — I\'d like a quote for kitchen hood cleaning.'), '_blank', 'noopener'); }} />
               </div>
               <div style={{ marginTop: 24, fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, letterSpacing: '.08em', color: '#4c5661' }}>NFPA 96 COMPLIANT · PHOTO REPORTS · SERVICE STICKERS · AFTER-HOURS CREWS</div>
