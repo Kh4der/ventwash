@@ -43,4 +43,9 @@ next-env.d.ts
 # keep the env template in the repo
 !.env.example
 
+# local libSQL database (dev only; prod uses Turso)
+/data/
+
+.vercel
+
 .vercel

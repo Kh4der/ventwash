@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import posthog from "posthog-js";
 import { track } from "@/lib/analytics";
+import { QUOTE_CONSENT_LABEL } from "@/lib/quote-consent";
 
 const MONO = "'IBM Plex Mono',monospace";
 const HEAD = "'Archivo',sans-serif";
@@ -70,6 +71,7 @@ const EMPTY_FORM: FormState = {
 export default function QuoteModal() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [consentCalls, setConsentCalls] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -85,7 +87,10 @@ export default function QuoteModal() {
   useEffect(() => {
     const onOpen = () => {
       // If a previous submission succeeded, start fresh next time.
-      if (successRef.current) setForm(EMPTY_FORM);
+      if (successRef.current) {
+        setForm(EMPTY_FORM);
+        setConsentCalls(false);
+      }
       setSuccess(false);
       setError(null);
       setOpen(true);
@@ -155,6 +160,7 @@ export default function QuoteModal() {
             email,
             hoods: form.hoods,
             message: form.message.trim(),
+            consentCalls,
             distinctId,
             url: window.location.href,
           }),
@@ -179,7 +185,7 @@ export default function QuoteModal() {
         setSubmitting(false);
       }
     },
-    [form, submitting]
+    [form, submitting, consentCalls]
   );
 
   if (!open) return null;
@@ -453,6 +459,32 @@ export default function QuoteModal() {
                   {error}
                 </div>
               )}
+
+              {/* Optional consent checkbox — unchecked by default (spec D14). */}
+              <label
+                htmlFor="vw-q-consent"
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  marginTop: 16,
+                  fontFamily: MONO,
+                  fontSize: 11.5,
+                  lineHeight: 1.6,
+                  letterSpacing: ".02em",
+                  color: "#5b6570",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  id="vw-q-consent"
+                  type="checkbox"
+                  checked={consentCalls}
+                  onChange={(e) => setConsentCalls(e.target.checked)}
+                  style={{ marginTop: 3, flexShrink: 0, accentColor: BLUE, cursor: "pointer" }}
+                />
+                <span>{QUOTE_CONSENT_LABEL}</span>
+              </label>
 
               <button
                 type="submit"

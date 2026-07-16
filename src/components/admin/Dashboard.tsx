@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   AreaChart,
   Area,
@@ -10,6 +11,12 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import FlagStrip from "./FlagStrip";
+import PipelinePanel from "./PipelinePanel";
+import ReviewPanel from "./ReviewPanel";
+import AppointmentsPanel from "./AppointmentsPanel";
+import JobsPanel from "./JobsPanel";
+import CompliancePanel from "./CompliancePanel";
 
 const INK = "#1a2129";
 const ACCENT = "#3E6FA6";
@@ -21,6 +28,16 @@ const CARD_BORDER = "1px solid rgba(26,33,41,.1)";
 
 const RANGES = ["7d", "14d", "30d", "90d"] as const;
 type Range = (typeof RANGES)[number];
+
+const TABS = [
+  "analytics",
+  "pipeline",
+  "review",
+  "appointments",
+  "jobs",
+  "compliance",
+] as const;
+type Tab = (typeof TABS)[number];
 
 const SECTION_ORDER = [
   "open",
@@ -373,12 +390,40 @@ function Skeleton() {
 /* --------------------------------- dashboard -------------------------------- */
 
 export default function Dashboard() {
+  const [tab, setTab] = useState<Tab>("analytics");
+  const [deadJobs, setDeadJobs] = useState(0);
   const [range, setRange] = useState<Range>("14d");
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const reqIdRef = useRef(0);
+
+  // Deep-link support: #pipeline etc. selects the tab on mount (deferred a
+  // tick so the effect body never sets state synchronously).
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!(TABS as readonly string[]).includes(hash)) return;
+    const t = setTimeout(() => setTab(hash as Tab), 0);
+    return () => clearTimeout(t);
+  }, []);
+
+  const selectTab = useCallback((t: Tab) => {
+    setTab(t);
+    window.history.replaceState(null, "", "#" + t);
+  }, []);
+
+  // Dead-job count badge on the JOBS tab (spec §8) — best-effort, silent.
+  useEffect(() => {
+    fetch("/api/admin/jobs", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.configured && data.counts) {
+          setDeadJobs(Number(data.counts.dead) || 0);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async (r: Range) => {
     const reqId = ++reqIdRef.current;
@@ -407,7 +452,9 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    load(range);
+    // Deferred a tick — no synchronous setState inside the effect body.
+    const t = setTimeout(() => load(range), 0);
+    return () => clearTimeout(t);
   }, [range, load]);
 
   async function handleLogout() {
@@ -472,7 +519,7 @@ export default function Dashboard() {
         }}
       >
         <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-          <a
+          <Link
             href="/"
             style={{
               fontFamily: HEAD,
@@ -494,7 +541,7 @@ export default function Dashboard() {
             >
               WASH
             </span>
-          </a>
+          </Link>
           <span
             style={{
               fontFamily: MONO,
@@ -504,38 +551,40 @@ export default function Dashboard() {
               color: BODY,
             }}
           >
-            Analytics
+            {tab}
           </span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div
-            style={{
-              display: "flex",
-              border: CARD_BORDER,
-              borderRadius: 3,
-              overflow: "hidden",
-            }}
-          >
-            {RANGES.map((r) => (
-              <button
-                key={r}
-                onClick={() => setRange(r)}
-                style={{
-                  fontFamily: MONO,
-                  fontSize: 11,
-                  letterSpacing: "0.08em",
-                  padding: "7px 12px",
-                  border: "none",
-                  cursor: "pointer",
-                  background: r === range ? INK : "#ffffff",
-                  color: r === range ? "#f3f8fb" : BODY,
-                }}
-              >
-                {r.toUpperCase()}
-              </button>
-            ))}
-          </div>
+          {tab === "analytics" && (
+            <div
+              style={{
+                display: "flex",
+                border: CARD_BORDER,
+                borderRadius: 3,
+                overflow: "hidden",
+              }}
+            >
+              {RANGES.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRange(r)}
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 11,
+                    letterSpacing: "0.08em",
+                    padding: "7px 12px",
+                    border: "none",
+                    cursor: "pointer",
+                    background: r === range ? INK : "#ffffff",
+                    color: r === range ? "#f3f8fb" : BODY,
+                  }}
+                >
+                  {r.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             onClick={handleLogout}
             style={{
@@ -559,6 +608,69 @@ export default function Dashboard() {
       </header>
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "24px 24px 64px" }}>
+        {/* Persistent kill-switch strip + critical-alert banner — every tab */}
+        <FlagStrip />
+
+        {/* Tab bar */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            border: CARD_BORDER,
+            borderRadius: 3,
+            overflow: "hidden",
+            width: "fit-content",
+            background: "#ffffff",
+            marginBottom: 16,
+          }}
+        >
+          {TABS.map((t) => (
+            <button
+              key={t}
+              onClick={() => selectTab(t)}
+              style={{
+                fontFamily: MONO,
+                fontSize: 11,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                padding: "8px 14px",
+                border: "none",
+                cursor: "pointer",
+                background: t === tab ? INK : "#ffffff",
+                color: t === tab ? "#f3f8fb" : BODY,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              {t}
+              {t === "jobs" && deadJobs > 0 && (
+                <span
+                  style={{
+                    fontFamily: MONO,
+                    fontSize: 10,
+                    background: "#b04a45",
+                    color: "#ffffff",
+                    borderRadius: 8,
+                    padding: "1px 6px",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {deadJobs}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {tab === "pipeline" && <PipelinePanel />}
+        {tab === "review" && <ReviewPanel />}
+        {tab === "appointments" && <AppointmentsPanel />}
+        {tab === "jobs" && <JobsPanel />}
+        {tab === "compliance" && <CompliancePanel />}
+
+        {tab === "analytics" && (
+          <>
         {error && (
           <div
             style={{
@@ -866,6 +978,8 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+        )}
+          </>
         )}
       </main>
     </div>
