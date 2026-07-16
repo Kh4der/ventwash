@@ -5,6 +5,14 @@
 # 5 minutes instead. All timing lives in jobs.run_at, so an occasionally-late
 # GitHub-scheduled run is harmless — jobs just execute on the next tick.
 #
+# NOTE ON FREQUENCY: 5 minutes is GitHub's hard minimum for scheduled workflows
+# (and it is often delayed further under load) — */1 is not supported. This cron
+# is therefore the SAFETY NET, not the latency path: anything latency-sensitive
+# drains itself inline. /api/voice drains the queue from after() the moment a
+# call ends, so call summaries and confirmations send within seconds. If you
+# ever want a true 1-minute floor for reminders, point cron-job.org (free) or
+# Vercel Pro cron at the same Bearer-authed URL — the endpoint is pinger-agnostic.
+#
 # SETUP (one-time): add a repository secret named CRON_SECRET (Settings →
 # Secrets and variables → Actions → New repository secret) with the SAME value
 # as the CRON_SECRET env var in Vercel. Optionally add a SITE_URL variable if

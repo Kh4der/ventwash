@@ -1,5 +1,7 @@
+import { after } from "next/server";
 import { getDb, nowIso, q, qOne } from "@/lib/db";
 import { enqueue } from "@/lib/jobs";
+import { drainDueJobs } from "@/lib/worker";
 import { verifyVapiSecret } from "@/lib/voice/vapi";
 import { redactTranscript } from "@/lib/voice/redact";
 import {
@@ -174,6 +176,19 @@ export async function POST(request: Request) {
       await handleStatusUpdate(callId, status);
     } else if (type === "end-of-call-report") {
       await handleEndOfCallReport(msg, call, callId);
+      // Drain the queue right after responding so the founder's call summary
+      // and the customer's confirmation go out within seconds of hangup rather
+      // than waiting for the next cron tick. after() runs post-response, so
+      // Vapi still gets its 200 immediately. Claiming is atomic, so racing the
+      // cron is safe; the cron stays the safety net.
+      after(async () => {
+        try {
+          const stats = await drainDueJobs({ limit: 10, budgetMs: 20_000 });
+          console.log("[voice] post-call drain:", JSON.stringify(stats));
+        } catch (e) {
+          console.error("[voice] post-call drain failed:", e);
+        }
+      });
     }
     // Unknown types: acknowledged, ignored.
     return Response.json({ ok: true });

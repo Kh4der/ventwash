@@ -1,13 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
-import { getDb, q, nowIso } from "@/lib/db";
-import {
-  claimDueJobs,
-  completeJob,
-  failJob,
-  blockJob,
-  enqueue,
-} from "@/lib/jobs";
-import { HANDLERS, type JobHandler } from "@/lib/job-handlers";
+import { getDb, q } from "@/lib/db";
+import { enqueue } from "@/lib/jobs";
+import { drainDueJobs } from "@/lib/worker";
 
 /**
  * GET /api/cron/tick — THE cron worker (spec D15, §5). One drain loop, one
@@ -87,61 +81,8 @@ function hostOf(website: string): string | null {
 
 /** The worker: claim due jobs and execute under the wall-clock budget. */
 async function drainQueue(): Promise<Response> {
-  const started = Date.now();
-  const jobs = await claimDueJobs(25);
-  let executed = 0;
-  let blocked = 0;
-  let failed = 0;
-
-  let i = 0;
-  for (; i < jobs.length; i++) {
-    if (Date.now() - started > WORKER_BUDGET_MS) break;
-    const job = jobs[i];
-    const handler = HANDLERS[job.type] as JobHandler | undefined;
-    if (!handler) {
-      // Unknown type: never let one bad row wedge the queue.
-      await failJob(job, new Error(`unknown job type: ${job.type}`));
-      failed++;
-      continue;
-    }
-    try {
-      const result = await handler(job);
-      if (result && result.blocked) {
-        await blockJob(job.id, result.blocked);
-        blocked++;
-      } else {
-        await completeJob(job.id, result?.simulated ?? false);
-        executed++;
-      }
-    } catch (err) {
-      await failJob(job, err);
-      failed++;
-    }
-  }
-
-  // Budget exhausted: release unexecuted claimed jobs back to pending so they
-  // run next tick. The claim incremented attempts; give that attempt back —
-  // the job never actually ran.
-  let released = 0;
-  for (; i < jobs.length; i++) {
-    await q({
-      sql: `UPDATE jobs SET status = 'pending', locked_at = NULL,
-                            attempts = MAX(attempts - 1, 0), updated_at = ?
-            WHERE id = ? AND status = 'running'`,
-      args: [nowIso(), jobs[i].id],
-    });
-    released++;
-  }
-
-  return Response.json({
-    ok: true,
-    claimed: jobs.length,
-    executed,
-    blocked,
-    failed,
-    released,
-    tookMs: Date.now() - started,
-  });
+  const stats = await drainDueJobs({ limit: 25, budgetMs: WORKER_BUDGET_MS });
+  return Response.json({ ok: true, ...stats });
 }
 
 /** ?task=discovery — weekly Overpass sweep + crawl fan-out for stale leads. */
