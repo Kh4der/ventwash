@@ -411,3 +411,110 @@ export function daily_digest(stats: DigestStats): EmailContent {
     }),
   };
 }
+
+/** Fields carried on the call_summary job payload (see /api/voice). */
+export interface CallSummaryData {
+  phone?: string;
+  direction?: string;
+  outcome?: string | null;
+  intent?: string;
+  durationS?: number | null;
+  name?: string;
+  business?: string;
+  email?: string;
+  address?: string;
+  hoods?: string;
+  summary?: string | null;
+  transcript?: string | null;
+  apptKind?: string;
+  apptStartsAt?: string;
+}
+
+/** Seconds → "m:ss" (125 → "2:05"); null/invalid → "—". */
+function formatDurationMmss(seconds: number | null | undefined): string {
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return "—";
+  const total = Math.floor(seconds);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Internal founder notification summarizing a completed AI voice call: a
+ * category subject line (booked / emergency / opt-out / quote / callback /
+ * new call), the captured business details, the call summary, and the full
+ * (already-redacted) transcript in a scrollable monospace block. Every
+ * interpolated value is escaped; internal-only, so no unsubscribe/postal.
+ */
+export function call_summary(data: CallSummaryData): EmailContent {
+  const business = String(data.business ?? "").trim();
+  const phone = String(data.phone ?? "").trim();
+  const intent = String(data.intent ?? "").trim().toLowerCase();
+  const outcome = String(data.outcome ?? "").trim().toLowerCase();
+  const hasAppt = Boolean(String(data.apptStartsAt ?? "").trim());
+  const who = business || phone || "unknown caller";
+
+  let subject: string;
+  let category: string;
+  if (outcome === "booked" || hasAppt) {
+    subject = `[VentWash call] Inspection booked — ${who}`;
+    category = "Inspection booked";
+  } else if (intent === "emergency") {
+    subject = `[VentWash call] ⚠ EMERGENCY — ${who}`;
+    category = "⚠ Emergency";
+  } else if (outcome === "dnc_request" || outcome === "opt_out") {
+    subject = `[VentWash call] Opt-out — ${phone || who}`;
+    category = "Opt-out request";
+  } else if (intent === "quote" || outcome === "quote_captured") {
+    subject = `[VentWash call] Quote request — ${who}`;
+    category = "Quote request";
+  } else if (intent === "callback" || outcome === "callback_requested") {
+    subject = `[VentWash call] Callback requested — ${who}`;
+    category = "Callback requested";
+  } else {
+    subject = `[VentWash call] New call — ${who}`;
+    category = "New call";
+  }
+
+  const direction = String(data.direction ?? "").trim();
+  const rows = [
+    detailRow("Caller phone", escapeHtml(phone || "—")),
+    data.name ? detailRow("Name", escapeHtml(data.name)) : "",
+    business ? detailRow("Business", escapeHtml(business)) : "",
+    data.email ? detailRow("Email", escapeHtml(data.email)) : "",
+    data.address ? detailRow("Address", escapeHtml(data.address)) : "",
+    data.hoods ? detailRow("# Hoods", escapeHtml(data.hoods)) : "",
+    intent ? detailRow("Intent", escapeHtml(intent)) : "",
+    outcome ? detailRow("Outcome", escapeHtml(outcome)) : "",
+    detailRow("Duration", escapeHtml(formatDurationMmss(data.durationS ?? null))),
+  ];
+  if (hasAppt) {
+    const kind = String(data.apptKind ?? "").trim();
+    const when = formatWhen(String(data.apptStartsAt), process.env.BUSINESS_TIMEZONE || "America/New_York");
+    rows.push(
+      detailRow(
+        "Booked",
+        kind ? `${escapeHtml(kindLabel(kind))} — ${escapeHtml(when)}` : escapeHtml(when),
+      ),
+    );
+  }
+
+  const summaryText = String(data.summary ?? "").trim();
+  const transcriptText = String(data.transcript ?? "").trim();
+  const directionBit = direction
+    ? ` <span style="font-family:${MONO};font-size:12px;color:${MUTED};text-transform:none;letter-spacing:0;">(${escapeHtml(direction)})</span>`
+    : "";
+
+  return {
+    subject,
+    html: layout({
+      kicker: "Call summary",
+      heading: `${escapeHtml(category)}${directionBit}`,
+      bodyHtml: `
+        ${detailTable(rows.join(""))}
+        <div style="font-family:${MONO};font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:${BLUE};margin:18px 0 4px;">Summary</div>
+        <p style="margin:0;white-space:pre-wrap;">${summaryText ? escapeHtml(summaryText) : "—"}</p>
+        <div style="font-family:${MONO};font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:${BLUE};margin:18px 0 4px;">Transcript</div>
+        <pre style="font-family:${MONO};font-size:12px;line-height:1.55;color:${INK};background:${BG};border:${CARD_BORDER};border-radius:4px;padding:14px;max-height:420px;overflow:auto;white-space:pre-wrap;word-break:break-word;margin:0;">${transcriptText ? escapeHtml(transcriptText) : "No transcript captured."}</pre>`,
+      includePostal: false,
+    }),
+  };
+}

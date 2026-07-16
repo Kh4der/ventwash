@@ -1,4 +1,5 @@
 import { getDb, nowIso, q, qOne } from "@/lib/db";
+import { enqueue } from "@/lib/jobs";
 import { verifyVapiSecret } from "@/lib/voice/vapi";
 import { redactTranscript } from "@/lib/voice/redact";
 import {
@@ -380,6 +381,25 @@ async function handleEndOfCallReport(
     });
   }
 
+  // ── enrich an existing lead with details captured on THIS call ──
+  // COALESCE/NULLIF guards fill email/business/address ONLY when currently
+  // empty; a value already on record is never overwritten.
+  if (leadId) {
+    const address = str(sd.address, 300);
+    if (quote.email || quote.business || address) {
+      await q({
+        sql: `UPDATE leads SET
+                email = COALESCE(NULLIF(email, ''), ?),
+                business_name = CASE WHEN business_name IN ('', 'Unknown caller')
+                  THEN COALESCE(NULLIF(?, ''), business_name) ELSE business_name END,
+                address = COALESCE(NULLIF(address, ''), ?),
+                updated_at = ?
+              WHERE id = ?`,
+        args: [quote.email || null, quote.business, address || null, now, leadId],
+      });
+    }
+  }
+
   // ── outbound disclosure enforcement: fail ⇒ critical alert + auto-pause ──
   if (direction === "outbound" && turns.length > 0 && disclosureVerified === 0) {
     await raiseAlert(
@@ -447,6 +467,30 @@ async function handleEndOfCallReport(
     if (row && Number(row.n) >= 2) {
       await autoPauseChannel("voice_outbound_ai", "2 conduct flags in 24h");
     }
+  }
+
+  // ── founder call-summary notification (one per call) ──
+  const founderAddr = process.env.FOUNDER_EMAIL;
+  if (founderAddr && (turns.length > 0 || (durationS ?? 0) >= 5)) {
+    const apptRow = leadId
+      ? await qOne({
+          sql: "SELECT kind, starts_at FROM appointments WHERE lead_id = ? ORDER BY created_at DESC LIMIT 1",
+          args: [leadId],
+        })
+      : null;
+    await enqueue({
+      type: "send_email",
+      leadId: leadId ?? undefined,
+      idempotencyKey: `callnotify:${callId || callAttemptId || crypto.randomUUID()}`,
+      payload: {
+        template: "call_summary",
+        phone: quote.phone || phoneE164 || "", direction, outcome, intent: str(sd.intent, 40),
+        durationS, name: quote.name, business: quote.business, email: quote.email,
+        address: str(sd.address, 300), hoods: quote.hoods,
+        summary, transcript: (transcript || "").slice(0, 12000),
+        apptKind: apptRow ? String(apptRow.kind) : "", apptStartsAt: apptRow ? String(apptRow.starts_at) : "",
+      },
+    });
   }
 
   // ── PostHog telemetry (original plan's event vocabulary, preserved) ──

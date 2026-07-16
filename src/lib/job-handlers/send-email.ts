@@ -48,6 +48,7 @@ function payloadString(job: Job, key: string): string {
 export async function run(job: Job): Promise<HandlerResult> {
   const template = String(job.payload.template ?? "");
   if (template === "daily_digest") return runDailyDigest(job);
+  if (template === "call_summary") return runCallSummary(job);
 
   const leadId = job.lead_id ?? (payloadString(job, "leadId") || null);
   if (!leadId) throw new Error(`send_email(${template}) requires a lead id`);
@@ -253,5 +254,30 @@ export async function runDailyDigest(job: Job): Promise<HandlerResult> {
   const t = templates.daily_digest(stats);
   return mapSendResult(
     await sendEmail({ jobId: job.id, kind: "internal", template: "daily_digest", to: founder, ...t }),
+  );
+}
+
+/**
+ * Founder call-summary notification — fires once per AI voice call. The whole
+ * call payload rides on the job (a call may lack a full lead, so this skips
+ * the leadId-required check in run()). FOUNDER_EMAIL unset ⇒ simulated no-op
+ * so dev pipelines stay green.
+ */
+async function runCallSummary(job: Job): Promise<HandlerResult> {
+  const founder = process.env.FOUNDER_EMAIL;
+  if (!founder) {
+    console.log("[dev no-op] call_summary: FOUNDER_EMAIL unset — skipping");
+    return { simulated: true };
+  }
+  const t = templates.call_summary(job.payload as templates.CallSummaryData);
+  return mapSendResult(
+    await sendEmail({
+      leadId: job.lead_id ?? undefined,
+      jobId: job.id,
+      kind: "internal",
+      template: "call_summary",
+      to: founder,
+      ...t,
+    }),
   );
 }
