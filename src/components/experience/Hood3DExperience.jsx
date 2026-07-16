@@ -31,10 +31,6 @@ const ANCHOR3D = { range: [0.88, 0.75, 0.45], canopy: [1.1, 2.45, 0.35], filters
 const PART_SEC = { canopy: 4, filters: 5, fire: 6, duct: 7, fan: 8, mua: 9 };
 const VIDEO_SRC = { intro: '/animations/MAINSTART.scrub.mp4', outro: '/animations/FINALEND.scrub.mp4' };
 const END_IMG = '/animations/final-after.png';
-const FOUNDERS = [
-  { sign: 'Aare', role: 'CO-FOUNDER', img: '/leadership/arae.jpg' },
-  { sign: 'Khader', role: 'CO-FOUNDER', img: '/leadership/khader.jpg' },
-];
 const N = SECTIONS.length;
 const SEC_VH = 170;
 
@@ -743,31 +739,6 @@ function RevealList({ active, items, delay = 0.45 }) {
     ))}
   </div>;
 }
-// Pen-signature reveal: the script name "writes" itself left-to-right when
-// its section becomes active (clip-path sweep), like signing the work.
-function SignatureReveal({ text, active, delay = 0 }) {
-  const r = React.useRef(null);
-  const ent = React.useRef(false);
-  React.useEffect(() => {
-    const el = r.current; if (!el) return;
-    if (!active && !ent.current) return;
-    gsap.killTweensOf(el);
-    if (active) {
-      ent.current = true;
-      gsap.fromTo(el,
-        { clipPath: 'inset(-25% 100% -25% 0)', autoAlpha: 1 },
-        { clipPath: 'inset(-25% 0% -25% 0)', duration: 1.5, ease: 'power2.inOut', delay });
-    } else {
-      gsap.to(el, { autoAlpha: 0, duration: 0.3, ease: 'power2.in' });
-    }
-  }, [active]);
-  return (
-    <div ref={r} style={{ fontFamily: "'Great Vibes', cursive", fontSize: 32, lineHeight: 1.15, color: '#16233b', transform: 'rotate(-4deg)', opacity: 0, marginTop: 2, whiteSpace: 'nowrap' }}>
-      {text}
-    </div>
-  );
-}
-
 function WipeBtn({ label, primary, small, onClick }) {
   const [h, setH] = React.useState(false);
   const ref = React.useRef(null);
@@ -1204,23 +1175,9 @@ function Hood3DExperience() {
             {s.endCta ? <RevealBlock active={act} delay={0.5} style={{ marginTop: 20, pointerEvents: 'auto' }}>
               <div style={{ display: 'inline-flex', gap: 12 }}>
                 <WipeBtn small primary label="Get a free quote" onClick={() => { track('quote_cta_clicked', { location: 'end' }); window.dispatchEvent(new CustomEvent('vw:quote-open')); }} />
-                <WipeBtn small label="WhatsApp us" onClick={() => { track('whatsapp_cta_clicked', { location: 'end' }); window.open('https://wa.me/17868609286?text=' + encodeURIComponent('Hi VentWash — I\'d like a quote for kitchen hood cleaning.'), '_blank', 'noopener'); }} />
+                <WipeBtn small label="Call (973) 291-9726" onClick={() => { track('call_cta_clicked', { location: 'end' }); window.location.href = 'tel:+19732919726'; }} />
               </div>
               <div style={{ marginTop: 14, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, letterSpacing: '.08em', color: '#4c5661' }}>NFPA 96 COMPLIANT · PHOTO REPORTS · AFTER-HOURS CREWS</div>
-            </RevealBlock> : null}
-            {s.endCta ? <RevealBlock active={act} delay={0.75} style={{ marginTop: 22 }}>
-              <div style={{ width: 1.5, height: 22, background: 'rgba(26,33,41,.25)', margin: '0 auto 12px' }}></div>
-              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, letterSpacing: '.18em', color: '#5b6570' }}>EVERY JOB LEAVES WITH OUR NAMES ON IT</div>
-              <div style={{ display: 'flex', gap: 'clamp(28px,6vw,64px)', justifyContent: 'center', marginTop: 14 }}>
-                {FOUNDERS.map((f, fi) => (
-                  <div key={f.sign} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <img src={f.img} alt={`${f.sign} — ${f.role}, VentWash`} width="72" height="72"
-                      style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', filter: 'grayscale(100%) contrast(1.06)', border: '2px solid rgba(62,111,166,.55)', boxShadow: '0 0 0 5px rgba(243,248,251,.75), 0 10px 26px rgba(26,33,41,.18)' }} />
-                    <SignatureReveal text={f.sign} active={act} delay={0.95 + fi * 0.55} />
-                    <div style={{ marginTop: 2, fontFamily: "'IBM Plex Mono',monospace", fontSize: 10.5, letterSpacing: '.14em', color: '#5b6570' }}>{f.role}</div>
-                  </div>
-                ))}
-              </div>
             </RevealBlock> : null}
             {i === 0 ? <RevealBlock active={act} delay={0.85} style={{ marginTop: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
               <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5, letterSpacing: '.22em', color: '#5b6570' }}>SCROLL</div>
@@ -1239,6 +1196,35 @@ function Hood3DExperience() {
       <div ref={(el) => { uiRefs.current.mB = el; }} style={{ position: 'fixed', left: '-4vw', right: '-4vw', bottom: '11%', zIndex: 2, opacity: 0, overflow: 'hidden', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
         <div ref={(el) => { uiRefs.current.mBin = el; }} style={{ display: 'inline-block', whiteSpace: 'nowrap', fontWeight: 800, fontSize: 'clamp(40px,5vw,86px)', letterSpacing: '-0.01em', color: 'rgba(38,52,66,.14)' }}>{(MARQ + MARQ + MARQ + MARQ) + (MARQ + MARQ + MARQ + MARQ)}</div>
       </div>
+
+      {/* Floating call pill — fixed, so the AI answering line is reachable from
+          every section of the scroll story. Bottom-left keeps it clear of the
+          section dots (right) and the header CTA (top). */}
+      <a
+        href="tel:+19732919726"
+        onClick={() => track('call_cta_clicked', { location: 'floating' })}
+        aria-label="Call VentWash at (973) 291-9726"
+        className="vw-call-float"
+        style={{
+          position: 'fixed', left: 22, bottom: 22, zIndex: 20,
+          display: 'inline-flex', alignItems: 'center', gap: 10,
+          padding: '12px 18px', borderRadius: 999,
+          background: '#1a2129', color: '#f3f8fb', textDecoration: 'none',
+          fontFamily: "'IBM Plex Mono',monospace", fontSize: 12.5, letterSpacing: '.08em',
+          boxShadow: '0 10px 30px rgba(26,33,41,.32)',
+          pointerEvents: 'auto', animation: 'vwCallFloat 3.4s ease-in-out infinite',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = '#3E6FA6'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = '#1a2129'; }}
+      >
+        <span style={{ position: 'relative', display: 'inline-flex', width: 18, height: 18, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span className="vw-call-ring" style={{ position: 'absolute', inset: -4, borderRadius: '50%', border: '2px solid #3E6FA6', animation: 'vwCallRing 2.4s ease-out infinite', pointerEvents: 'none' }}></span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+          </svg>
+        </span>
+        <span className="vw-call-label">(973) 291-9726</span>
+      </a>
 
       <div style={{ position: 'fixed', right: 22, top: '50%', transform: 'translateY(-50%)', zIndex: 5, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {SECTIONS.map((s, i) => (

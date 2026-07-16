@@ -35,3 +35,50 @@ a:hover {
     transform: translateY(46px);
   }
 }
+
+/* Floating call pill: a slow breathing lift plus an expanding ring, so the
+   call CTA stays noticeable on every section without nagging. */
+@keyframes vwCallFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes vwCallRing {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  70% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Respect users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .vw-call-float,
+  .vw-call-ring {
+    animation: none !important;
+  }
+}
+
+/* On phones the number would crowd the frame — collapse to just the handset. */
+@media (max-width: 560px) {
+  .vw-call-label {
+    display: none;
+  }
+  .vw-call-float {
+    padding: 14px !important;
+    left: 16px !important;
+    bottom: 16px !important;
+  }
+}
